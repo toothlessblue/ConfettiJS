@@ -1,0 +1,15 @@
+{
+  "devDependencies": {
+    "esbuild": "^0.19.11",
+    "typescript": "^5.3.3"
+  },
+  "name": "confettijs",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node esbuild.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
