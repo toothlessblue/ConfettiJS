@@ -6,12 +6,16 @@ const esbuild = require('esbuild');
         bundle: true,
         outfile: 'dist/index.js',
         format: 'esm',
-        platform: 'browser'
+        platform: 'browser',
+        loader: {
+            '.png': 'dataurl',
+            '.obj': 'text',
+        },
     });
-    
+
     await ctx.rebuild();
-    
+
     console.log('Watching...');
-    
+
     await ctx.watch();
 })();

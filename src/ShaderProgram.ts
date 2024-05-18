@@ -4,7 +4,7 @@ export class ShaderProgram {
     private gl: WebGL2RenderingContext;
     private program: WebGLProgram;
 
-    private uniformCache: Record<string, WebGLUniformLocation> = {};
+    private uniformCache: Record<string, WebGLUniformLocation | null> = {};
 
     constructor(gl: WebGL2RenderingContext, vertexSource: string, fragmentSource: string, varyings?: string[]) {
         this.gl = gl;
@@ -20,19 +20,9 @@ export class ShaderProgram {
         linkShaderProgram(this.gl, this.program);
     }
 
-    private getDefiniteLocation(uniformName: string) {
-        let location = this.gl.getUniformLocation(this.program, uniformName);
-
-        if (!location) {
-            throw new Error(`Unable to get uniform "${uniformName}" location`);
-        }
-
-        return location;
-    }
-
     getLocation(uniformName: string) {
         if (!this.uniformCache[uniformName]) {
-            this.uniformCache[uniformName] = this.getDefiniteLocation(uniformName);
+            this.uniformCache[uniformName] = this.gl.getUniformLocation(this.program, uniformName);
         }
 
         return this.uniformCache[uniformName];
@@ -45,103 +35,119 @@ export class ShaderProgram {
     uniform1fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform1iv(location, data, srcOffset, srcLength);
     }
 
     uniform1iv(uniformName: string, data: Int32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform1iv(location, data, srcOffset, srcLength);
     }
 
     uniform2fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform2fv(location, data, srcOffset, srcLength);
     }
 
     uniform2iv(uniformName: string, data: Int32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform2iv(location, data, srcOffset, srcLength);
     }
 
     uniform3fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform3fv(location, data, srcOffset, srcLength);
     }
 
     uniform3iv(uniformName: string, data: Int32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform3iv(location, data, srcOffset, srcLength);
     }
 
     uniform4fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform4fv(location, data, srcOffset, srcLength);
     }
 
     uniform4iv(uniformName: string, data: Int32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
+        if (!location) return;
         this.gl.uniform4iv(location, data, srcOffset, srcLength);
     }
 
-    uniformMatrix2fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix2fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix2fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix2fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix3fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix3fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix3fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix3fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix4fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix4fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix4fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix4fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix2x3fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix2x3fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix2x3fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix2x3fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix2x4fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix2x4fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix2x4fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix2x4fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix3x2fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix3x2fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix3x2fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix3x2fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix3x4fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix3x4fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix3x4fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix3x4fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix4x2fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix4x2fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix4x2fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix4x2fv(location, false, data, srcOffset, srcLength);
     }
 
-    uniformMatrix4x3fv(uniformName: string, transpose: GLboolean, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
+    uniformMatrix4x3fv(uniformName: string, data: Float32List, srcOffset?: GLuint, srcLength?: GLuint): void {
         this.use();
         let location = this.getLocation(uniformName);
-        this.gl.uniformMatrix4x3fv(location, transpose, data, srcOffset, srcLength);
+        if (!location) return;
+        this.gl.uniformMatrix4x3fv(location, false, data, srcOffset, srcLength);
     }
-
 }

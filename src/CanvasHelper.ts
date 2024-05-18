@@ -19,7 +19,11 @@ export function spawnCanvas(): WebGL2RenderingContext {
     document.body.appendChild(canvas);
 
     let context = canvas.getContext('webgl2', {
-        antialias: true,
+        antialias: false,
+        depth: false,
+        desynchronized: true,
+        powerPreference: 'high-performance',
+        preserveDrawingBuffer: true,
     });
 
     if (!context) {
@@ -31,10 +35,10 @@ export function spawnCanvas(): WebGL2RenderingContext {
     return context;
 }
 
-export function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement) {
+export function resizeCanvasToDisplaySize(canvas: HTMLCanvasElement, ratio: number = 1) {
     // Lookup the size the browser is displaying the canvas in CSS pixels.
-    let displayWidth = canvas.clientWidth;
-    let displayHeight = canvas.clientHeight;
+    let displayWidth = Math.floor(canvas.clientWidth * ratio);
+    let displayHeight = Math.floor(canvas.clientHeight * ratio);
 
     // Check if the canvas is not the same size.
     let needResize = canvas.width !== displayWidth ||

@@ -15,3 +15,19 @@ export function degToRad(deg: number) {
 export function radToDeg(rad: number) {
     return rad * (180 / Math.PI);
 }
+
+export function randomRange(min: number, max: number): number {
+    return (Math.random() * (max - min)) + min;
+}
+
+export function randomInt(min: number, max: number): number {
+    return Math.floor(randomRange(min, max));
+}
+
+export function randomFromArray<T>(array: T[]): T {
+    return array[randomInt(0, array.length)];
+}
+
+export function firstWord(string: string) {
+    return string.substring(0, string.indexOf(' '));
+}
