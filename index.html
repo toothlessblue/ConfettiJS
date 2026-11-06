@@ -3,8 +3,22 @@
 <head>
     <title>Confetti!</title>
 
-    <script type="module">
-        import './dist/index.js';
+    <script type="module" defer>
+        import {ConfettiEngine} from './dist/index.js';
+        
+        let engine = new ConfettiEngine();
+
+        engine.createConfettiInstances((i) => {
+            return [
+                [Math.random() * 300, Math.random() * 150, 0.0],
+                [1,1,1],
+                [Math.random() * Math.PI,Math.random() * Math.PI,Math.random() * Math.PI],
+                [2,1,1],
+            ];
+        }, 100);
+
+        engine.renderCompute();
+        console.log('Rendered');
     </script>
 
     <style>

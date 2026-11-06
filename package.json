@@ -1,13 +1,14 @@
 {
   "devDependencies": {
     "esbuild": "^0.19.11",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "@types/bun": "latest"
   },
   "name": "confettijs",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "node esbuild.js"
+    "_dev": "node esbuild.js"
   },
   "author": "",
   "license": "ISC",

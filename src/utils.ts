@@ -1,33 +1,20 @@
-export function repeat<T>(callback: (index: number) => T, times: number): T[] {
-    let out: T[] = [];
-
-    for (let i = 0; i < times; i++) {
-        out.push(callback(i));
+export function convertGLErrorToString(error: number) {
+    switch (error) {
+        case WebGL2RenderingContext.NO_ERROR:
+            return 'NO_ERROR';
+        case WebGL2RenderingContext.INVALID_ENUM:
+            return 'INVALID_ENUM';
+        case WebGL2RenderingContext.INVALID_VALUE:
+            return 'INVALID_VALUE';
+        case WebGL2RenderingContext.INVALID_OPERATION:
+            return 'INVALID_OPERATION';
+        case WebGL2RenderingContext.INVALID_FRAMEBUFFER_OPERATION:
+            return 'INVALID_FRAMEBUFFER_OPERATION';
+        case WebGL2RenderingContext.OUT_OF_MEMORY:
+            return 'OUT_OF_MEMORY';
+        case WebGL2RenderingContext.CONTEXT_LOST_WEBGL:
+            return 'CONTEXT_LOST_WEBGL';
+        default:
+            return 'UNKNOWN ERROR!';
     }
-
-    return out;
-}
-
-export function degToRad(deg: number) {
-    return deg * (Math.PI / 180);
-}
-
-export function radToDeg(rad: number) {
-    return rad * (180 / Math.PI);
-}
-
-export function randomRange(min: number, max: number): number {
-    return (Math.random() * (max - min)) + min;
-}
-
-export function randomInt(min: number, max: number): number {
-    return Math.floor(randomRange(min, max));
-}
-
-export function randomFromArray<T>(array: T[]): T {
-    return array[randomInt(0, array.length)];
-}
-
-export function firstWord(string: string) {
-    return string.substring(0, string.indexOf(' '));
 }
