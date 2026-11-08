@@ -18,3 +18,10 @@ export function convertGLErrorToString(error: number) {
             return 'UNKNOWN ERROR!';
     }
 }
+
+export const COMPUTE_FRAG_SOURCE = `#version 300 es
+precision highp float;
+
+void main() {
+}
+`

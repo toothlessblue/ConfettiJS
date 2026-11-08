@@ -1,16 +1,19 @@
-import { basicShader_dataLayout, basicShader_frag, basicShader_vert } from "./basic-shader";
+import { basicShader_compute, basicShader_dataLayout, basicShader_frag, basicShader_vert } from "./basic-shader";
 import { Mesh } from "./mesh";
 import { StaticQuadMesh } from "./static-quad-mesh";
 
 export const defaultOptions = {
     shaderVert: basicShader_vert,
     shaderFrag: basicShader_frag,
+    shaderCompute: basicShader_compute,
     bufferLayout: basicShader_dataLayout,
     mesh: new StaticQuadMesh(),
 }
+type DefaultOptions = typeof defaultOptions;
 
 export interface InitOptionsCommon {
     mesh: Mesh
+    fullscreen?: boolean,
 }
 
 export interface InitOptionsWithCanvas {
@@ -21,7 +24,6 @@ export interface InitOptionsWithParent {
     parentElement: HTMLElement;
 }
 
-type DefaultOptions = typeof defaultOptions;
 type OptionalOptions = Partial<InitOptionsWithParent & InitOptionsWithCanvas>;
 
 export type InitOptions = InitOptionsCommon & OptionalOptions & Partial<DefaultOptions>;

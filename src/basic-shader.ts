@@ -1,6 +1,7 @@
 import { AttributeArrayType } from './attribute-array-data';
 import { MeshDataType } from './mesh';
 import { BufferLayout, ShaderLayout } from './buffer-layout';
+import { getVaryingsFromComputeShader } from './shader-helper';
 
 //language=GLSL
 export const basicShader_vert = `#version 300 es
@@ -51,6 +52,36 @@ void main() {
     outColor = vec4(1.0, 0.0, 1.0, 1.0);
 }
 `;
+
+//language=GLSL
+export const basicShader_compute = `#version 300 es
+
+precision highp float;
+
+uniform vec2 canvasSize;
+
+layout (location = 3) in vec3 in_position;
+layout (location = 4) in vec3 in_velocity;
+layout (location = 5) in vec3 in_rotation;
+layout (location = 6) in vec3 in_scale;
+
+out vec3 out_position;
+out vec3 out_velocity;
+out vec3 out_rotation;
+out vec3 out_scale;
+
+void main() {
+    vec3 gravityVec = vec3(0.0f, -0.1f, 0.0f);
+    vec3 velocity = in_velocity + gravityVec;
+
+    out_velocity = velocity;
+    out_scale = in_scale;
+    out_position = in_position + velocity;
+    out_rotation = in_rotation;
+}
+`;
+
+getVaryingsFromComputeShader(basicShader_compute);
 
 export const basicShader_dataLayout: ShaderLayout = [
     // Mesh buffer (unchanging)
