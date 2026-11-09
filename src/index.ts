@@ -12,7 +12,6 @@ export class ConfettiEngine {
     private options: Options;
     private instanceCount: number = 0;
     private viewMatrix: Matrix;
-    private canvas: HTMLCanvasElement;
 
     private renderProgram: WebGLProgram;
     private computeProgram: WebGLProgram;
@@ -26,6 +25,8 @@ export class ConfettiEngine {
 
     private computeVAO: WebGLVertexArrayObject;
     private computePingPongVAO: WebGLVertexArrayObject;
+
+    readonly canvas: HTMLCanvasElement;
 
     private createCanvasAndAddToDOM(parent: HTMLElement): HTMLCanvasElement {
         let canvas = document.createElement('canvas');
@@ -158,17 +159,7 @@ export class ConfettiEngine {
         this.context.deleteTransformFeedback(transformFeedback);
         this.context.disable(this.context.RASTERIZER_DISCARD);
 
-        let otherVAO = this.computeVAO;
-        this.computeVAO = this.computePingPongVAO;
-        this.computePingPongVAO = otherVAO;
-
-        let otherBuffer = this.particleBuffer;
-        this.particleBuffer = this.particlePingPongBuffer;
-        this.particlePingPongBuffer = otherBuffer;
-
-        let otherRenderVAO = this.renderVAO;
-        this.renderVAO = this.renderPingPongVAO;
-        this.renderPingPongVAO = otherRenderVAO;
+        this.swapPingPongObjects();
     }
 
     private renderComputeLoop() {
@@ -291,7 +282,9 @@ export class ConfettiEngine {
 
         let computeVaryings = getVaryingsFromComputeShader(this.options.shaderCompute);
         if (computeVaryings.length !== this.options.bufferLayout[1].layout.length) {
-            throw new Error(`Failed to parse varyings from compute shader, expected ${this.options.bufferLayout[1].layout.length}, got ${computeVaryings.length} (${JSON.stringify(computeVaryings)})`);
+            throw new Error(
+                `Failed to parse varyings from compute shader, expected ${this.options.bufferLayout[1].layout.length}, got ${computeVaryings.length} (${JSON.stringify(computeVaryings)})`
+            );
             // TODO could also check that the size of the varyings match the definitions in the shader
         }
 
@@ -327,6 +320,20 @@ export class ConfettiEngine {
         cancelAnimationFrame(this.rafId);
     }
 
+    swapPingPongObjects() {
+        let otherVAO = this.computeVAO;
+        this.computeVAO = this.computePingPongVAO;
+        this.computePingPongVAO = otherVAO;
+
+        let otherBuffer = this.particleBuffer;
+        this.particleBuffer = this.particlePingPongBuffer;
+        this.particlePingPongBuffer = otherBuffer;
+
+        let otherRenderVAO = this.renderVAO;
+        this.renderVAO = this.renderPingPongVAO;
+        this.renderPingPongVAO = otherRenderVAO;
+    }
+
     createConfettiInstances(generator: ConfettiGeneratorFunction, count: number) {
         let expectedAttributeCount = this.options.bufferLayout[1].layout.length;
         let particleData: number[] = [];
@@ -353,23 +360,36 @@ export class ConfettiEngine {
             particleData.push(...newData.flat());
         }
 
-        // TODO append data onto particle buffer instead of recreating it
+        let newBufferSize =
+            (this.instanceCount + count) *
+            getBufferStride(this.options.bufferLayout[1]) *
+            Float32Array.BYTES_PER_ELEMENT;
+
+        let oldBufferSize =
+            this.instanceCount * getBufferStride(this.options.bufferLayout[1]) * Float32Array.BYTES_PER_ELEMENT;
+
+        this.instanceCount += count;
+
+        this.context.bindBuffer(WebGL2RenderingContext.COPY_READ_BUFFER, this.particleBuffer);
+        this.context.bindBuffer(WebGL2RenderingContext.COPY_WRITE_BUFFER, this.particlePingPongBuffer);
+
+        this.context.bufferData(WebGL2RenderingContext.COPY_WRITE_BUFFER, newBufferSize, this.context.DYNAMIC_DRAW);
+        this.context.copyBufferSubData(WebGL2RenderingContext.COPY_READ_BUFFER, WebGL2RenderingContext.COPY_WRITE_BUFFER, 0, 0, oldBufferSize);
+
+        this.context.bindBuffer(WebGL2RenderingContext.COPY_READ_BUFFER, null);
+        this.context.bindBuffer(WebGL2RenderingContext.COPY_WRITE_BUFFER, null);
+
+        this.context.bindBuffer(WebGL2RenderingContext.ARRAY_BUFFER, this.particlePingPongBuffer);
+        this.context.bufferSubData(WebGL2RenderingContext.ARRAY_BUFFER, oldBufferSize, new Float32Array(particleData));
 
         this.context.bindBuffer(WebGL2RenderingContext.ARRAY_BUFFER, this.particleBuffer);
         this.context.bufferData(
             WebGL2RenderingContext.ARRAY_BUFFER,
-            new Float32Array(particleData),
+            newBufferSize,
             WebGL2RenderingContext.DYNAMIC_DRAW
         );
 
-        this.context.bindBuffer(WebGL2RenderingContext.ARRAY_BUFFER, this.particlePingPongBuffer);
-        this.context.bufferData(
-            WebGL2RenderingContext.ARRAY_BUFFER,
-            particleData.length * 4,
-            WebGL2RenderingContext.DYNAMIC_DRAW,
-        )
-
-        this.instanceCount = count;
+        this.swapPingPongObjects();
     }
 
     deleteConfettiInstances() {

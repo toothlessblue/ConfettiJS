@@ -81,8 +81,6 @@ void main() {
 }
 `;
 
-getVaryingsFromComputeShader(basicShader_compute);
-
 export const basicShader_dataLayout: ShaderLayout = [
     // Mesh buffer (unchanging)
     {
