@@ -1,5 +1,7 @@
 import { AttributeArrayType, getAttributeTypeSize } from './attribute-array-data';
+import { DataLayout } from './buffer-layout';
 
+const layoutRegex = /layout \(location = (?<locationString>[0-9]*)\) in (?<typeString>.*) (?<name>.*);/g;
 const varyingRegex = /^out (.*) (.*);$/;
 
 function typeDefinitionToAttributeType(type: string) {
@@ -26,7 +28,7 @@ function typeDefinitionToAttributeType(type: string) {
 }
 
 export function getVaryingsFromComputeShader(source: string) {
-    let ret: { name: string, type: string, sizeBytes: number }[] = [];
+    let ret: { name: string; type: string; sizeBytes: number }[] = [];
 
     for (let line of source.split('\n')) {
         let result = varyingRegex.exec(line);
@@ -39,4 +41,38 @@ export function getVaryingsFromComputeShader(source: string) {
     }
 
     return ret;
+}
+
+export function parseShaderForBufferLayout(source: string) {
+    let meshKeynames = ['modelPosition', 'modelNormal', 'modelUv'];
+
+    let layout: DataLayout = {
+        mesh: [],
+        lifetime: [{ name: 'lifetime', type: AttributeArrayType.Float, location: -1 }],
+        particle: [],
+    };
+
+    let seenLocations = new Set<number>();
+
+    for (let match of source.matchAll(layoutRegex)) {
+        if (!match.groups) continue;
+
+        let { locationString, typeString, name } = match.groups;
+        
+        let location = parseInt(locationString);
+        if (seenLocations.has(location)) {
+            throw new Error(`Location ${location} appears more than once within shader source!`);
+        }
+        seenLocations.add(location);
+
+        let type = typeDefinitionToAttributeType(typeString);
+
+        if (meshKeynames.includes(name)) {
+            layout.mesh.push({ type, location, name });
+        } else {
+            layout.particle.push({ type, location, name });
+        }
+    }
+
+    return layout;
 }

@@ -1,8 +1,3 @@
-import { AttributeArrayType } from './attribute-array-data';
-import { MeshDataType } from './mesh';
-import { BufferLayout, ShaderLayout } from './buffer-layout';
-import { getVaryingsFromComputeShader } from './shader-helper';
-
 //language=GLSL
 export const basicShader_vert = `#version 300 es
 precision highp float;
@@ -17,6 +12,7 @@ layout (location = 3) in vec3 particlePosition;
 layout (location = 4) in vec3 particleVelocity;
 layout (location = 5) in vec3 particleRotation;
 layout (location = 6) in vec3 particleScale;
+layout (location = 7) in float particleLifetime;
 
 mat4 scaleMatrix(vec3 s) {
     return mat4(
@@ -39,7 +35,9 @@ mat4 translationMatrix(vec3 p) {
 out vec2 uv;
 
 void main() {
-    gl_Position = viewMatrix * translationMatrix(particlePosition) * scaleMatrix(particleScale) * vec4(modelPosition, 1.0);
+    float scaleMultiplier = particleLifetime / 1.0f;
+
+    gl_Position = viewMatrix * translationMatrix(particlePosition) * scaleMatrix(particleScale * scaleMultiplier) * vec4(modelPosition, 1.0);
     uv = modelUv;
 }
 
@@ -69,15 +67,17 @@ precision highp float;
 uniform float deltaTime;
 uniform vec2 canvasSize;
 
-layout (location = 3) in vec3 in_position;
-layout (location = 4) in vec3 in_velocity;
-layout (location = 5) in vec3 in_rotation;
-layout (location = 6) in vec3 in_scale;
+layout (location = 0) in vec3 in_position;
+layout (location = 1) in vec3 in_velocity;
+layout (location = 2) in vec3 in_rotation;
+layout (location = 3) in vec3 in_scale;
+layout (location = 4) in float in_lifetime;
 
 out vec3 out_position;
 out vec3 out_velocity;
 out vec3 out_rotation;
 out vec3 out_scale;
+out float out_lifetime;
 
 void main() {
     vec3 gravityVec = vec3(0.0f, -981.0f, 0.0f) * deltaTime;
@@ -87,27 +87,6 @@ void main() {
     out_scale = in_scale;
     out_position = in_position + (velocity * deltaTime);
     out_rotation = in_rotation;
+    out_lifetime = max(in_lifetime - deltaTime, 0.0f);
 }
 `;
-
-export const basicShader_dataLayout: ShaderLayout = [
-    // Mesh buffer (unchanging)
-    {
-        layout: [
-            AttributeArrayType.Vec3, // Model position
-            AttributeArrayType.Vec3, // Model normal
-            AttributeArrayType.Vec2, // Model UV
-        ],
-        meshLayout: [MeshDataType.POSITION, MeshDataType.NORMAL, MeshDataType.UV],
-    },
-
-    // Particle data
-    {
-        layout: [
-            AttributeArrayType.Vec3, // Particle position,
-            AttributeArrayType.Vec3, // Particle velocity,
-            AttributeArrayType.Vec3, // Particle euler rotation,
-            AttributeArrayType.Vec3, // Particle scale,
-        ],
-    },
-];

@@ -1,9 +1,10 @@
 import { attributeArrayTypeToString, getAttributeTypeSize } from './attribute-array-data';
-import { getBufferStride, MeshBufferLayout, ParticleBufferLayout } from './buffer-layout';
+import { BufferLayout, bufferLayoutToMeshData, DataLayout, getBufferStride } from './buffer-layout';
+import { initCanvas } from './canvas-helper';
 import { ConfettiGeneratorFunction } from './confetti-generator-function';
 import { Matrix, multiplyManyMatrices, scaleMatrix, translationMatrix } from './matrix-helper';
 import { defaultOptions, InitOptions, Options } from './options';
-import { getVaryingsFromComputeShader } from './shader-helper';
+import { getVaryingsFromComputeShader, parseShaderForBufferLayout } from './shader-helper';
 import { COMPUTE_FRAG_SOURCE, convertGLErrorToString, isPowerOf2 } from './utils';
 
 export class ConfettiEngine {
@@ -17,6 +18,9 @@ export class ConfettiEngine {
 
     private renderProgram: WebGLProgram;
     private computeProgram: WebGLProgram;
+
+    private renderLayout: DataLayout;
+    private computeLayout: DataLayout;
 
     private meshBuffer: WebGLBuffer;
     private particleBuffer: WebGLBuffer;
@@ -51,27 +55,6 @@ export class ConfettiEngine {
         }
 
         return context;
-    }
-
-    private readAndPrintError() {
-        let error = this.context.getError();
-        if (error == this.context.NO_ERROR) return;
-
-        console.error(convertGLErrorToString(error));
-    }
-
-    private readAndThrowShaderCompilationErrors(shader: WebGLShader) {
-        let log = this.context.getShaderInfoLog(shader);
-        if (log === null || log === '') return;
-
-        throw new Error('Shader compilation error! ' + log);
-    }
-
-    private readAndThrowProgramLinkingErrors(program: WebGLProgram) {
-        let log = this.context.getProgramInfoLog(program);
-        if (log === null || log === '') return;
-
-        throw new Error('Program linking error! ' + log);
     }
 
     private createVAO() {
@@ -120,6 +103,27 @@ export class ConfettiEngine {
         return program;
     }
 
+    private readAndPrintError() {
+        let error = this.context.getError();
+        if (error == this.context.NO_ERROR) return;
+
+        console.error(convertGLErrorToString(error));
+    }
+
+    private readAndThrowShaderCompilationErrors(shader: WebGLShader) {
+        let log = this.context.getShaderInfoLog(shader);
+        if (log === null || log === '') return;
+
+        throw new Error('Shader compilation error! ' + log);
+    }
+
+    private readAndThrowProgramLinkingErrors(program: WebGLProgram) {
+        let log = this.context.getProgramInfoLog(program);
+        if (log === null || log === '') return;
+
+        throw new Error('Program linking error! ' + log);
+    }
+
     private renderCompute() {
         // Note that in some browsers methods for getting current time are always innaccurate,
         // e.g. librewolf comes with resistfingerprinting enabled by default. This causes the
@@ -141,8 +145,6 @@ export class ConfettiEngine {
     }
 
     private renderPass() {
-        this.resizeCanvasToClientSize();
-
         this.context.bindVertexArray(this.renderVAO);
         this.context.useProgram(this.renderProgram);
 
@@ -187,50 +189,40 @@ export class ConfettiEngine {
         requestAnimationFrame(this.renderComputeLoop.bind(this));
     }
 
-    private setUpMeshBuffer(vbo: WebGLBuffer) {
-        let buffer = this.options.bufferLayout[0];
-
+    private setUpMeshBuffer(vbo: WebGLBuffer, layout: DataLayout) {
         this.context.bindBuffer(this.context.ARRAY_BUFFER, vbo);
         this.context.bufferData(
             WebGL2RenderingContext.ARRAY_BUFFER,
-            this.options.mesh.getMeshData(buffer.meshLayout),
+            this.options.mesh.getMeshData(bufferLayoutToMeshData(layout.mesh)),
             WebGL2RenderingContext.STATIC_DRAW
         );
 
-        this.applyBufferAttributes(buffer, 0, 0);
+        this.applyBufferAttributes(layout.mesh, 0);
     }
 
-    private setUpParticleBuffer(vbo: WebGLBuffer) {
-        let buffer = this.options.bufferLayout[1];
-        let attributeIndex = this.options.bufferLayout[0].layout.length;
-
+    private setUpParticleBuffer(vbo: WebGLBuffer, layout: DataLayout) {
         this.context.bindBuffer(this.context.ARRAY_BUFFER, vbo);
-        this.applyBufferAttributes(buffer, attributeIndex, 1);
+        this.applyBufferAttributes(layout.particle, 1);
     }
 
-    private applyBufferAttributes(
-        buffer: MeshBufferLayout | ParticleBufferLayout,
-        attributeIndex: number,
-        divisor: number
-    ) {
-        let strideBytes = getBufferStride(buffer) * 4;
+    private applyBufferAttributes(layout: BufferLayout, divisor: number) {
+        let strideBytes = getBufferStride(layout) * 4;
         let offsetBytes = 0;
 
-        for (let attributeI in buffer.layout) {
-            this.context.enableVertexAttribArray(attributeIndex);
-            this.context.vertexAttribDivisor(attributeIndex, divisor);
+        for (let attributeI in layout) {
+            this.context.enableVertexAttribArray(layout[attributeI].location);
+            this.context.vertexAttribDivisor(layout[attributeI].location, divisor);
 
             this.context.vertexAttribPointer(
-                attributeIndex,
-                getAttributeTypeSize(buffer.layout[attributeI]),
-                buffer.types?.[attributeI] ?? WebGL2RenderingContext.FLOAT,
+                layout[attributeI].location,
+                getAttributeTypeSize(layout[attributeI].type),
+                WebGL2RenderingContext.FLOAT,
                 false,
                 strideBytes,
                 offsetBytes
             );
 
-            offsetBytes += getAttributeTypeSize(buffer.layout[attributeI]) * 4;
-            attributeIndex++;
+            offsetBytes += getAttributeTypeSize(layout[attributeI].type) * 4;
         }
     }
 
@@ -250,48 +242,16 @@ export class ConfettiEngine {
         return this.viewMatrix;
     }
 
-    private resizeCanvasToClientSize() {
-        let displayWidth = Math.floor(this.canvas.clientWidth);
-        let displayHeight = Math.floor(this.canvas.clientHeight);
-
-        let needResize = this.canvas.width !== displayWidth || this.canvas.height !== displayHeight;
-
-        if (needResize) {
-            this.canvas.width = displayWidth;
-            this.canvas.height = displayHeight;
-            this.context.viewport(0, 0, this.canvas.width, this.canvas.height);
-            this.viewMatrix = this.updateViewMatrix();
-        }
-
-        return needResize;
-    }
-
     constructor(options: InitOptions) {
         // parentElement cannot be part of defaultOptions (it won't be available at the time of the script being loaded)
         this.options = { parentElement: document.body, ...defaultOptions, ...options };
 
-        let parent = this.options.parentElement;
-        this.canvas = this.options.canvas ?? this.createCanvasAndAddToDOM(parent);
-        this.canvas.id ||= 'confetti-canvas-' + crypto.randomUUID(); // crypto uuids sometimes start with numbers, which is invalid for a CSS ID, lol
+        this.renderLayout = parseShaderForBufferLayout(this.options.shaderVert);
+        this.computeLayout = parseShaderForBufferLayout(this.options.shaderCompute);
 
-        if (this.options.fullscreen) {
-            let canvasStyles = new CSSStyleSheet();
-
-            //language=css
-            canvasStyles.replaceSync(`
-                #${this.canvas.id} {
-                    position: fixed;
-                    inset: 0;
-                    width: 100%;
-                    height: 100%;
-                }
-            `);
-
-            document.adoptedStyleSheets.push(canvasStyles);
-        }
+        this.canvas = initCanvas(this.options, this.resizeCanvas.bind(this));
 
         this.context = this.getContextOrFail(this.canvas);
-
         this.context.clearColor(0, 0, 0, 0);
         this.context.enable(WebGL2RenderingContext.BLEND);
         this.context.blendFunc(WebGL2RenderingContext.SRC_ALPHA, WebGL2RenderingContext.ONE_MINUS_SRC_ALPHA);
@@ -307,15 +267,15 @@ export class ConfettiEngine {
         this.particlePingPongBuffer = this.createVBO();
 
         let computeVaryings = getVaryingsFromComputeShader(this.options.shaderCompute);
-        if (computeVaryings.length !== this.options.bufferLayout[1].layout.length) {
+        if (computeVaryings.length !== this.computeLayout.particle.length) {
             throw new Error(
-                `Failed to parse varyings from compute shader, expected ${this.options.bufferLayout[1].layout.length}, got ${computeVaryings.length} (${JSON.stringify(computeVaryings)})`
+                `Failed to parse varyings from compute shader, expected ${this.computeLayout.particle.length}, got ${computeVaryings.length} (${JSON.stringify(computeVaryings)})`
             );
         }
 
-        for (let i = 0; i < computeVaryings.length; i++) {
-            if (computeVaryings[i].sizeBytes !== getAttributeTypeSize(this.options.bufferLayout[1].layout[i])) {
-                let type = this.options.bufferLayout[1].layout[i];
+        for (let i = 0; i < computeVaryings.length - 1; i++) {
+            if (computeVaryings[i].sizeBytes !== getAttributeTypeSize(this.computeLayout.particle[i].type)) {
+                let type = this.computeLayout.particle[i].type;
                 throw new Error(
                     `Varying size mismatch, compute shader varying "${computeVaryings[i].name}" has size ${computeVaryings[i].sizeBytes} (${computeVaryings[i].type}), expected ${getAttributeTypeSize(type)} (${attributeArrayTypeToString(type)})`
                 );
@@ -329,25 +289,41 @@ export class ConfettiEngine {
             computeVaryings.map((_) => _.name)
         );
 
-        this.viewMatrix = this.updateViewMatrix();
-
         // Setting up renderVAO
         this.context.bindVertexArray(this.renderVAO);
-        this.setUpMeshBuffer(this.meshBuffer);
-        this.setUpParticleBuffer(this.particleBuffer);
+        this.setUpMeshBuffer(this.meshBuffer, this.renderLayout);
+        this.setUpParticleBuffer(this.particleBuffer, this.renderLayout);
 
         // Setting up computeVAO
         this.context.bindVertexArray(this.computeVAO);
-        this.setUpParticleBuffer(this.particleBuffer);
+        this.setUpParticleBuffer(this.particleBuffer, this.computeLayout);
 
         // Setting up renderPingPongVAO
         this.context.bindVertexArray(this.renderPingPongVAO);
-        this.setUpMeshBuffer(this.meshBuffer);
-        this.setUpParticleBuffer(this.particlePingPongBuffer);
+        this.setUpMeshBuffer(this.meshBuffer, this.renderLayout);
+        this.setUpParticleBuffer(this.particlePingPongBuffer, this.renderLayout);
 
         // Setting up computePingPongVAO
         this.context.bindVertexArray(this.computePingPongVAO);
-        this.setUpParticleBuffer(this.particlePingPongBuffer);
+        this.setUpParticleBuffer(this.particlePingPongBuffer, this.computeLayout);
+
+        this.viewMatrix = this.updateViewMatrix();
+    }
+
+    resizeCanvas(width: number, height: number) {
+        let displayWidth = Math.floor(width);
+        let displayHeight = Math.floor(height);
+
+        let needResize = this.canvas.width !== displayWidth || this.canvas.height !== displayHeight;
+
+        if (needResize) {
+            this.canvas.width = displayWidth;
+            this.canvas.height = displayHeight;
+            this.context.viewport(0, 0, this.canvas.width, this.canvas.height);
+            this.viewMatrix = this.updateViewMatrix();
+        }
+
+        return needResize;
     }
 
     start() {
@@ -364,13 +340,14 @@ export class ConfettiEngine {
         this.computeVAO = this.computePingPongVAO;
         this.computePingPongVAO = otherVAO;
 
-        let otherBuffer = this.particleBuffer;
+        let otherParticleBuffer = this.particleBuffer;
         this.particleBuffer = this.particlePingPongBuffer;
-        this.particlePingPongBuffer = otherBuffer;
+        this.particlePingPongBuffer = otherParticleBuffer;
 
         let otherRenderVAO = this.renderVAO;
         this.renderVAO = this.renderPingPongVAO;
         this.renderPingPongVAO = otherRenderVAO;
+
     }
 
     // Loads an image from a URL into the next WebGL texture unit
@@ -449,8 +426,8 @@ export class ConfettiEngine {
         this.context.uniform1i(location, this.textures.length - 1);
     }
 
-    createConfettiInstances(generator: ConfettiGeneratorFunction, count: number) {
-        let expectedAttributeCount = this.options.bufferLayout[1].layout.length;
+    createParticleInstances(count: number, generator: ConfettiGeneratorFunction) {
+        let expectedAttributeCount = this.computeLayout.particle.length;
         let particleData: number[] = [];
 
         for (let pi = 0; pi < count; pi++) {
@@ -458,16 +435,16 @@ export class ConfettiEngine {
 
             if (newData.length !== expectedAttributeCount) {
                 throw new Error(
-                    `Confetti generator function did not return the expected number of attributes (got ${newData.length}, expected ${expectedAttributeCount})`
+                    `Particle generator function did not return the expected number of attributes (got ${newData.length}, expected ${expectedAttributeCount})`
                 );
             }
 
             for (let di = 0; di < newData.length; di++) {
-                let type = this.options.bufferLayout[1].layout[di];
+                let type = this.computeLayout.particle[di].type;
                 let attributeSize = getAttributeTypeSize(type);
                 if (attributeSize !== newData[di].length) {
                     throw new Error(
-                        `Confetti generator function returned incorrected data length for attribute ${di} (${attributeArrayTypeToString(type)}) (expected ${attributeSize}, got ${newData[di].length})`
+                        `Particle generator function returned incorrected data length for attribute ${di} (${attributeArrayTypeToString(type)}) (expected ${attributeSize}, got ${newData[di].length})`
                     );
                 }
             }
@@ -475,13 +452,10 @@ export class ConfettiEngine {
             particleData.push(...newData.flat());
         }
 
-        let newBufferSize =
-            (this.instanceCount + count) *
-            getBufferStride(this.options.bufferLayout[1]) *
-            Float32Array.BYTES_PER_ELEMENT;
+        let particleBufferStride = getBufferStride(this.computeLayout.particle);
 
-        let oldBufferSize =
-            this.instanceCount * getBufferStride(this.options.bufferLayout[1]) * Float32Array.BYTES_PER_ELEMENT;
+        let newBufferSize = (this.instanceCount + count) * particleBufferStride * Float32Array.BYTES_PER_ELEMENT;
+        let oldBufferSize = this.instanceCount * particleBufferStride * Float32Array.BYTES_PER_ELEMENT;
 
         this.instanceCount += count;
 

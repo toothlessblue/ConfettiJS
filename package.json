@@ -4,7 +4,7 @@
     "typescript": "^5.3.3",
     "@types/bun": "latest"
   },
-  "name": "confettijs",
+  "name": "webgl-particles",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {

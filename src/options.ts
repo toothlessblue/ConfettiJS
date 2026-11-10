@@ -1,13 +1,12 @@
-import { basicShader_compute, basicShader_dataLayout, basicShader_frag, basicShader_vert } from "./basic-shader";
-import { Mesh } from "./mesh";
+import { basicShader_compute, basicShader_frag, basicShader_vert } from "./basic-shader";
 import { StaticQuadMesh } from "./static-quad-mesh";
 
 export const defaultOptions = {
     shaderVert: basicShader_vert,
     shaderFrag: basicShader_frag,
     shaderCompute: basicShader_compute,
-    bufferLayout: basicShader_dataLayout,
     mesh: new StaticQuadMesh(),
+    manualResizeHandling: false,
 }
 type DefaultOptions = typeof defaultOptions;
 
