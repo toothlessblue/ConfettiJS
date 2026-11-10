@@ -80,7 +80,7 @@ out vec3 out_rotation;
 out vec3 out_scale;
 
 void main() {
-    vec3 gravityVec = vec3(0.0f, -9.81f, 0.0f);
+    vec3 gravityVec = vec3(0.0f, -981.0f, 0.0f) * deltaTime;
     vec3 velocity = in_velocity + gravityVec;
 
     out_velocity = velocity;

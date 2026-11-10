@@ -374,7 +374,7 @@ export class ConfettiEngine {
     }
 
     // Loads an image from a URL into the next WebGL texture unit
-    loadTextureFromURL(url: string) {
+    loadTextureFromURL(url: string, customUniformName?: string) {
         let textureId = this.context.createTexture();
         if (!textureId) {
             console.warn(
@@ -444,7 +444,8 @@ export class ConfettiEngine {
         this.context.activeTexture(WebGL2RenderingContext.TEXTURE0 + this.textures.length - 1);
         this.context.bindTexture(WebGL2RenderingContext.TEXTURE_2D, textureId);
 
-        let location = this.context.getUniformLocation(this.renderProgram, `texture_${this.textures.length - 1}`);
+        let uniformName = customUniformName ?? `texture_${this.textures.length - 1}`;
+        let location = this.context.getUniformLocation(this.renderProgram, uniformName);
         this.context.uniform1i(location, this.textures.length - 1);
     }
 
