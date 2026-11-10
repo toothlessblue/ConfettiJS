@@ -12,7 +12,6 @@ export const defaultOptions = {
 type DefaultOptions = typeof defaultOptions;
 
 export interface InitOptionsCommon {
-    mesh: Mesh
     fullscreen?: boolean,
 }
 

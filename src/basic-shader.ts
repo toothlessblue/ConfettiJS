@@ -36,20 +36,28 @@ mat4 translationMatrix(vec3 p) {
     );
 }
 
+out vec2 uv;
+
 void main() {
     gl_Position = viewMatrix * translationMatrix(particlePosition) * scaleMatrix(particleScale) * vec4(modelPosition, 1.0);
+    uv = modelUv;
 }
 
 `;
 
 //language=GLSL
 export const basicShader_frag = `#version 300 es
-precision highp float;
+precision mediump float;
 
+uniform sampler2D texture_0;
+
+in vec2 uv;
 out vec4 outColor;
 
+const vec2 flipUV = vec2(1.0, -1.0);
+
 void main() {
-    outColor = vec4(1.0, 0.0, 1.0, 1.0);
+    outColor = texture(texture_0, uv * flipUV);
 }
 `;
 
@@ -58,6 +66,7 @@ export const basicShader_compute = `#version 300 es
 
 precision highp float;
 
+uniform float deltaTime;
 uniform vec2 canvasSize;
 
 layout (location = 3) in vec3 in_position;
@@ -71,12 +80,12 @@ out vec3 out_rotation;
 out vec3 out_scale;
 
 void main() {
-    vec3 gravityVec = vec3(0.0f, -0.1f, 0.0f);
+    vec3 gravityVec = vec3(0.0f, -9.81f, 0.0f);
     vec3 velocity = in_velocity + gravityVec;
 
     out_velocity = velocity;
     out_scale = in_scale;
-    out_position = in_position + velocity;
+    out_position = in_position + (velocity * deltaTime);
     out_rotation = in_rotation;
 }
 `;

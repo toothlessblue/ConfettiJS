@@ -10,20 +10,22 @@
             fullscreen: true,
         });
 
+        engine.loadTextureFromURL('/dragon.png');
+
         window.addEventListener('click', (event) => {
             engine.createConfettiInstances((i) => {
                 let angle = 3.0 * Math.PI / 8.0 + Math.random() * Math.PI / 4.0;
                 let xc = Math.cos(angle);
                 let yc = Math.sin(angle);
-                let speed = 5.0 + (Math.random() * 1.0);
+                let speed = 500.0 + (Math.random() * 100.0);
 
                 return [
                     [event.clientX, engine.canvas.height - event.clientY, 0.0],
                     [speed * xc, speed * yc, 0.0],
                     [Math.random() * Math.PI,Math.random() * Math.PI,Math.random() * Math.PI],
-                    [2,1,1],
+                    [50,50,1],
                 ];
-            }, 1000);
+            }, 10000);
         });
 
         engine.start();

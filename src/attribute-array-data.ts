@@ -1,4 +1,6 @@
 export enum AttributeArrayType {
+    Int,
+    Float,
     Vec2,
     Vec3,
     Vec4,
@@ -7,6 +9,8 @@ export enum AttributeArrayType {
 }
 
 const attributeArrayTypeToSize = {
+    [AttributeArrayType.Int]: 1,
+    [AttributeArrayType.Float]: 1,
     [AttributeArrayType.Vec2]: 2,
     [AttributeArrayType.Vec3]: 3,
     [AttributeArrayType.Vec4]: 4,
@@ -16,6 +20,10 @@ const attributeArrayTypeToSize = {
 
 export function attributeArrayTypeToString(type: AttributeArrayType) {
     switch (type) {
+        case AttributeArrayType.Int:
+            return 'Int'
+        case AttributeArrayType.Float:
+            return 'Float'
         case AttributeArrayType.Vec2:
             return 'Vec2';
         case AttributeArrayType.Vec3:

@@ -19,9 +19,13 @@ export function convertGLErrorToString(error: number) {
     }
 }
 
+export function isPowerOf2(value: number) {
+    return (value & (value - 1)) === 0;
+}
+
 export const COMPUTE_FRAG_SOURCE = `#version 300 es
 precision highp float;
 
 void main() {
 }
-`
+`;
