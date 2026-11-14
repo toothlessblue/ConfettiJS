@@ -8,21 +8,18 @@ import { getVaryingsFromComputeShader, parseShaderForBufferLayout, VaryingInfo }
 import { COMPUTE_FRAG_SOURCE, convertGLErrorToString, isPowerOf2, uniqueOf } from './utils';
 
 export class ConfettiEngine {
-    private context: WebGL2RenderingContext;
+    // Miscellaneous variables 
     private rafId: any = null;
     private options: Options;
     private instanceCount: number = 0;
     private viewMatrix: Matrix;
-
     private lastFrameEndTime: number = 0;
+
+    // WebGL identifiers
+    private context: WebGL2RenderingContext;
 
     private renderProgram: WebGLProgram;
     private computeProgram: WebGLProgram;
-
-    private renderLayout: DataLayout;
-    private computeLayout: DataLayout;
-
-    private particleBufferStructure: AttributeData[] = [];
 
     private meshBuffer: WebGLBuffer;
     private particleBuffer: WebGLBuffer;
@@ -36,13 +33,14 @@ export class ConfettiEngine {
 
     private textures: WebGLTexture[] = [];
 
-    readonly canvas: HTMLCanvasElement;
+    // Contains the locations that vertex attributes are pointed to (parsed from the shader)
+    private renderLayout: DataLayout;
+    private computeLayout: DataLayout;
 
-    private createCanvasAndAddToDOM(parent: HTMLElement): HTMLCanvasElement {
-        let canvas = document.createElement('canvas');
-        parent.appendChild(canvas);
-        return canvas;
-    }
+    // Contains the aggregate layouts of the render program + the compute program, 
+    private particleBufferLayout: AttributeData[];
+
+    readonly canvas: HTMLCanvasElement;
 
     private getContextOrFail(canvas: HTMLCanvasElement) {
         let context = canvas.getContext('webgl2', {
@@ -126,11 +124,15 @@ export class ConfettiEngine {
         throw new Error('Program linking error! ' + log);
     }
 
-    private renderCompute() {
+    private calculateDeltaTime() {
+        if (this.options.assumeFrameTime) {
+            return this.options.assumeFrameTime;
+        }
+
         // Note that in some browsers methods for getting current time are always innaccurate,
         // e.g. librewolf comes with resistfingerprinting enabled by default. This causes the
         // frame timing to be all over the place and can make the animation look jittery.
-
+        // (This is what "assumeFrameTime" is for.)
         let deltaTime = Date.now() - this.lastFrameEndTime;
         if (deltaTime > 66) {
             // If frame took longer than 66ms (< 15fps) then reset to 66
@@ -139,8 +141,12 @@ export class ConfettiEngine {
             deltaTime = 66;
         }
 
+        return deltaTime
+    }
+
+    private renderCompute() {
         this.renderPass();
-        this.computePass(deltaTime);
+        this.computePass(this.calculateDeltaTime());
 
         this.lastFrameEndTime = Date.now();
     }
@@ -228,7 +234,7 @@ export class ConfettiEngine {
     }
 
     private applyParticleBufferAttributes(layout: BufferLayout, divisor: number) {
-        let strideBytes = getBufferStride(this.particleBufferStructure) * 4;
+        let strideBytes = getBufferStride(this.particleBufferLayout) * 4;
 
         for (let attributeI in layout) {
             this.context.enableVertexAttribArray(layout[attributeI].location);
@@ -240,7 +246,7 @@ export class ConfettiEngine {
                 WebGL2RenderingContext.FLOAT,
                 false,
                 strideBytes,
-                getAttributeOffsetBytes(layout[attributeI].name, this.particleBufferStructure),
+                getAttributeOffsetBytes(layout[attributeI].name, this.particleBufferLayout),
             );
         }
     }
@@ -262,8 +268,8 @@ export class ConfettiEngine {
     }
 
     private ensureVaryingsCorrectOrder(varyings: VaryingInfo[]) {
-        if (varyings.length !== this.particleBufferStructure.length) {
-            let missing = this.particleBufferStructure.find(_=>!varyings.map(varying=>varying.name).includes('out_' + _.name));
+        if (varyings.length !== this.particleBufferLayout.length) {
+            let missing = this.particleBufferLayout.find(_=>!varyings.map(varying=>varying.name).includes('out_' + _.name));
             if (!missing) {
                 throw new Error(`Missing varying in compute shader, but cannot identify which one (this error shouldn't be reachable, please report an issue on github with a minimal reproduction)`);
             }
@@ -271,17 +277,17 @@ export class ConfettiEngine {
             throw new Error(`Missing varyings in compute shader, must include this exact varying definition: out ${attributeArrayTypeToString(missing.type).toLowerCase()} out_${missing.name};`)
         }
 
-        for (let i in this.particleBufferStructure) {
-            if ('out_' + this.particleBufferStructure[i].name !== varyings[i].name) {
-                throw new Error(`Varyings unexpected ordering, ensure they appear in the following order with the correct naming in the compute shader:\n${this.particleBufferStructure.map(_ => `out ${attributeArrayTypeToString(_.type).toLowerCase()} out_${_.name};`).join('\n')}`);
+        for (let i in this.particleBufferLayout) {
+            if ('out_' + this.particleBufferLayout[i].name !== varyings[i].name) {
+                throw new Error(`Varyings unexpected ordering, ensure they appear in the following order with the correct naming in the compute shader:\n${this.particleBufferLayout.map(_ => `out ${attributeArrayTypeToString(_.type).toLowerCase()} out_${_.name};`).join('\n')}`);
             }
         }
     }
 
     private ensureComputeShaderCorrectness() {
-        if (this.computeLayout.particle.length !== this.particleBufferStructure.length) {
-            let missing = this.particleBufferStructure.filter(_ => !this.computeLayout.particle.find(__=>__.name === _.name)).map(_ => _.name);
-            throw new Error(`Ensure the compute shader consumes the exact number of elements expected for the particle buffer. Got ${this.computeLayout.particle.length}, expected ${this.particleBufferStructure.length}, missing: ${missing.join(', ')}`)
+        if (this.computeLayout.particle.length !== this.particleBufferLayout.length) {
+            let missing = this.particleBufferLayout.filter(_ => !this.computeLayout.particle.find(__=>__.name === _.name)).map(_ => _.name);
+            throw new Error(`Ensure the compute shader consumes the exact number of elements expected for the particle buffer. Got ${this.computeLayout.particle.length}, expected ${this.particleBufferLayout.length}, missing: ${missing.join(', ')}`)
         }
     }
 
@@ -291,7 +297,7 @@ export class ConfettiEngine {
 
         this.renderLayout = parseShaderForBufferLayout(this.options.shaderVert);
         this.computeLayout = parseShaderForBufferLayout(this.options.shaderCompute);
-        this.particleBufferStructure = uniqueOf([...this.renderLayout.particle, ...this.computeLayout.particle], (v) => v.name);
+        this.particleBufferLayout = uniqueOf([...this.renderLayout.particle, ...this.computeLayout.particle], (v) => v.name);
 
         this.ensureComputeShaderCorrectness();
 
@@ -321,7 +327,7 @@ export class ConfettiEngine {
         }
 
         for (let i = 0; i < computeVaryings.length - 1; i++) {
-            if (computeVaryings[i].sizeBytes !== getAttributeTypeSize(this.particleBufferStructure[i].type)) {
+            if (computeVaryings[i].sizeBytes !== getAttributeTypeSize(this.particleBufferLayout[i].type)) {
                 let type = this.computeLayout.particle[i].type;
                 throw new Error(
                     `Varying size mismatch, compute shader varying "${computeVaryings[i].name}" has size ${computeVaryings[i].sizeBytes} (${computeVaryings[i].type}), expected ${getAttributeTypeSize(type)} (${attributeArrayTypeToString(type)})`
@@ -479,7 +485,7 @@ export class ConfettiEngine {
         for (let pi = 0; pi < count; pi++) {
             let newData = generator(pi);
 
-            for (let attribute of this.particleBufferStructure) {
+            for (let attribute of this.particleBufferLayout) {
                 let size = getAttributeTypeSize(attribute.type);
                 let value = newData[attribute.name] ?? new Float32Array(size);
                 
@@ -491,7 +497,7 @@ export class ConfettiEngine {
             }
         }
 
-        let particleBufferStride = getBufferStride(this.particleBufferStructure);
+        let particleBufferStride = getBufferStride(this.particleBufferLayout);
 
         let newBufferSize = (this.instanceCount + count) * particleBufferStride * Float32Array.BYTES_PER_ELEMENT;
         let oldBufferSize = this.instanceCount * particleBufferStride * Float32Array.BYTES_PER_ELEMENT;
