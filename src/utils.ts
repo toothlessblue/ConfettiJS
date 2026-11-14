@@ -23,6 +23,20 @@ export function isPowerOf2(value: number) {
     return (value & (value - 1)) === 0;
 }
 
+export function uniqueOf<T>(ofItems: T[], toKey: (v: T) => string) {
+    let ret: T[] = [];
+    let got = new Set<string>();
+
+    for (let v of ofItems) {
+        let k = toKey(v);
+        if (got.has(k)) continue;
+        got.add(k);
+        ret.push(v);
+    }
+
+    return ret;
+}
+
 export const COMPUTE_FRAG_SOURCE = `#version 300 es
 precision highp float;
 

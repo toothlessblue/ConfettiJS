@@ -1,1 +1,1 @@
-export type ConfettiGeneratorFunction = (confettiI: number) => number[][];
+export type ConfettiGeneratorFunction = (confettiI: number) => Record<string, number[]>;

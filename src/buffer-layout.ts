@@ -1,20 +1,24 @@
 import { AttributeArrayType, getAttributeTypeSize } from './attribute-array-data';
 import { MeshDataType } from './mesh';
 
-export type BufferLayout = {
-    type: AttributeArrayType;
+export interface AttributeData {
+    name: string,
+    type: AttributeArrayType
+}
+
+interface AttributeLocation extends AttributeData {
     location: number;
-    name: string;
-}[];
+}
+
+export type BufferLayout = AttributeLocation[];
 
 export interface DataLayout {
     mesh: BufferLayout;
-    lifetime: BufferLayout;
     particle: BufferLayout;
 }
 
 // Returns the number of 32 bit integers per attribute of the specified buffer
-export function getBufferStride(buffer: BufferLayout) {
+export function getBufferStride(buffer: AttributeData[]) {
     let sum = 0;
     for (let attribute of buffer) {
         sum += getAttributeTypeSize(attribute.type);
@@ -38,4 +42,18 @@ export function bufferLayoutToMeshData(layout: BufferLayout) {
     }
 
     return ret;
+}
+
+export function getAttributeOffsetBytes(name: string, layout: AttributeData[]) {
+    let offset = 0;
+
+    for (let attribute of layout) {
+        if (attribute.name === name) {
+            return offset * 4;
+        }
+
+        offset += getAttributeTypeSize(attribute.type);
+    }
+
+    throw new Error(`Couldn't find attribute ${name} in layout ${JSON.stringify(layout)}`);
 }

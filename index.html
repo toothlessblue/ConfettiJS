@@ -13,19 +13,19 @@
         engine.loadTextureFromURL('/dragon.png');
 
         window.addEventListener('click', (event) => {
-            engine.createParticleInstances(10, (i) => {
+            engine.createParticleInstances(100, (i) => {
                 let angle = 3.0 * Math.PI / 8.0 + Math.random() * Math.PI / 4.0;
                 let xc = Math.cos(angle);
                 let yc = Math.sin(angle);
                 let speed = 500.0 + (Math.random() * 100.0);
 
-                return [
-                    [event.clientX, engine.canvas.height - event.clientY, 0.0],
-                    [speed * xc, speed * yc, 0.0],
-                    [Math.random() * Math.PI,Math.random() * Math.PI,Math.random() * Math.PI],
-                    [25,25,1],
-                    [1.0]
-                ];
+                return {
+                    particlePosition: [event.clientX, engine.canvas.height - event.clientY, 0.0],
+                    particleVelocity: [speed * xc, speed * yc, 0.0],
+                    particleRotation: [Math.random() * Math.PI,Math.random() * Math.PI,Math.random() * Math.PI],
+                    particleScale: [25,25,1],
+                    particleLifetime: [1.0]
+                };
             });
         });
 

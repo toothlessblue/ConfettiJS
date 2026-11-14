@@ -27,8 +27,14 @@ function typeDefinitionToAttributeType(type: string) {
     }
 }
 
+export interface VaryingInfo {
+    name: string;
+    type: string;
+    sizeBytes: number;
+}
+
 export function getVaryingsFromComputeShader(source: string) {
-    let ret: { name: string; type: string; sizeBytes: number }[] = [];
+    let ret: VaryingInfo[] = [];
 
     for (let line of source.split('\n')) {
         let result = varyingRegex.exec(line);
@@ -48,7 +54,6 @@ export function parseShaderForBufferLayout(source: string) {
 
     let layout: DataLayout = {
         mesh: [],
-        lifetime: [{ name: 'lifetime', type: AttributeArrayType.Float, location: -1 }],
         particle: [],
     };
 
@@ -58,7 +63,7 @@ export function parseShaderForBufferLayout(source: string) {
         if (!match.groups) continue;
 
         let { locationString, typeString, name } = match.groups;
-        
+
         let location = parseInt(locationString);
         if (seenLocations.has(location)) {
             throw new Error(`Location ${location} appears more than once within shader source!`);

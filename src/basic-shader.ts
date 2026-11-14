@@ -9,10 +9,8 @@ layout (location = 1) in vec3 modelNormal;
 layout (location = 2) in vec2 modelUv;
 
 layout (location = 3) in vec3 particlePosition;
-layout (location = 4) in vec3 particleVelocity;
-layout (location = 5) in vec3 particleRotation;
-layout (location = 6) in vec3 particleScale;
-layout (location = 7) in float particleLifetime;
+layout (location = 4) in vec3 particleScale;
+layout (location = 5) in float particleLifetime;
 
 mat4 scaleMatrix(vec3 s) {
     return mat4(
@@ -67,26 +65,26 @@ precision highp float;
 uniform float deltaTime;
 uniform vec2 canvasSize;
 
-layout (location = 0) in vec3 in_position;
-layout (location = 1) in vec3 in_velocity;
-layout (location = 2) in vec3 in_rotation;
-layout (location = 3) in vec3 in_scale;
-layout (location = 4) in float in_lifetime;
+layout (location = 0) in vec3 particlePosition;
+layout (location = 1) in vec3 particleVelocity;
+layout (location = 2) in vec3 particleRotation;
+layout (location = 3) in vec3 particleScale;
+layout (location = 4) in float particleLifetime;
 
-out vec3 out_position;
-out vec3 out_velocity;
-out vec3 out_rotation;
-out vec3 out_scale;
-out float out_lifetime;
+out vec3 out_particlePosition;
+out vec3 out_particleScale;
+out float out_particleLifetime;
+out vec3 out_particleVelocity;
+out vec3 out_particleRotation;
 
 void main() {
     vec3 gravityVec = vec3(0.0f, -981.0f, 0.0f) * deltaTime;
-    vec3 velocity = in_velocity + gravityVec;
+    vec3 velocity = particleVelocity + gravityVec;
 
-    out_velocity = velocity;
-    out_scale = in_scale;
-    out_position = in_position + (velocity * deltaTime);
-    out_rotation = in_rotation;
-    out_lifetime = max(in_lifetime - deltaTime, 0.0f);
+    out_particleVelocity = velocity;
+    out_particleScale = particleScale;
+    out_particlePosition = particlePosition + (velocity * deltaTime);
+    out_particleRotation = particleRotation;
+    out_particleLifetime = max(particleLifetime - deltaTime, 0.0f);
 }
 `;
