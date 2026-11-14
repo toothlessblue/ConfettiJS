@@ -1,10 +1,20 @@
+/**
+ * Types of attribute arrays in a buffer.
+ */
 export enum AttributeArrayType {
+    /** Integer. */
     Int,
+    /** Floating-point. */
     Float,
+    /** 2D Vector. */
     Vec2,
+    /** 3D Vector. */
     Vec3,
+    /** 4D Vector. */
     Vec4,
+    /** 3x3 Matrix. */
     Mat3x3,
+    /** 4x4 Matrix. */
     Mat4x4,
 }
 
@@ -18,6 +28,11 @@ const attributeArrayTypeToSize = {
     [AttributeArrayType.Mat4x4]: 16,
 };
 
+/**
+ * Converts an `AttributeArrayType` enum value to its corresponding string representation.
+ * @param type - The type of the attribute array.
+ * @returns The string representation of the type.
+ */
 export function attributeArrayTypeToString(type: AttributeArrayType) {
     switch (type) {
         case AttributeArrayType.Int:
@@ -39,6 +54,11 @@ export function attributeArrayTypeToString(type: AttributeArrayType) {
     }
 }
 
+/**
+ * Returns the number of elements in an attribute of the specified type.
+ * @param type - The type of the attribute.
+ * @returns The number of elements.
+ */
 export function getAttributeTypeSize(type: AttributeArrayType) {
     return attributeArrayTypeToSize[type] ?? -1;
 }

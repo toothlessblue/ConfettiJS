@@ -1,5 +1,9 @@
 import { Mesh, MeshDataType } from './mesh';
 
+/**
+ * A mesh representing a static quad.
+ * @extends Mesh
+ */
 export class StaticQuadMesh extends Mesh {
     private static VERTICES = [
         [-1.0, -1.0, 0.0],

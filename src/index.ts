@@ -7,6 +7,10 @@ import { defaultOptions, InitOptions, Options } from './options';
 import { getVaryingsFromComputeShader, parseShaderForBufferLayout, VaryingInfo } from './shader-helper';
 import { COMPUTE_FRAG_SOURCE, convertGLErrorToString, isPowerOf2, uniqueOf } from './utils';
 
+/**
+ * The main engine for generating and rendering confetti.
+ * @extends ConfettiEngine
+ */
 export class ConfettiEngine {
     // Miscellaneous variables 
     private rafId: any = null;
@@ -42,6 +46,12 @@ export class ConfettiEngine {
 
     readonly canvas: HTMLCanvasElement;
 
+    /**
+     * Retrieves the WebGL2 rendering context from a canvas element.
+     * @param canvas - The canvas element to get the context from.
+     * @returns The WebGL2 rendering context.
+     * @throws Error if the context cannot be retrieved.
+     */
     private getContextOrFail(canvas: HTMLCanvasElement) {
         let context = canvas.getContext('webgl2', {
             antialias: false,
@@ -57,6 +67,11 @@ export class ConfettiEngine {
         return context;
     }
 
+    /**
+     * Creates a new Vertex Array Object (VAO).
+     * @returns The created VAO.
+     * @throws Error if the VAO cannot be created.
+     */
     private createVAO() {
         let vao = this.context.createVertexArray();
         if (!vao) {
@@ -65,6 +80,11 @@ export class ConfettiEngine {
         return vao;
     }
 
+    /**
+     * Creates a new Vertex Buffer Object (VBO).
+     * @returns The created VBO.
+     * @throws Error if the VBO cannot be created.
+     */
     private createVBO() {
         let vbo = this.context.createBuffer();
         if (!vbo) {
@@ -73,6 +93,13 @@ export class ConfettiEngine {
         return vbo;
     }
 
+    /**
+     * Builds a WebGL program from vertex and fragment shader source strings.
+     * @param shaderVert - The vertex shader source.
+     * @param shaderFrag - The fragment shader source.
+     * @param varyings - Optional array of varyings for transform feedback.
+     * @returns The compiled and linked WebGL program.
+     */
     private buildShaderProgram(shaderVert: string, shaderFrag: string, varyings?: string[]): WebGLProgram {
         let program = this.context.createProgram();
 
@@ -103,6 +130,9 @@ export class ConfettiEngine {
         return program;
     }
 
+    /**
+     * Checks for and logs any WebGL errors.
+     */
     private readAndPrintError() {
         let error = this.context.getError();
         if (error == this.context.NO_ERROR) return;
@@ -110,6 +140,10 @@ export class ConfettiEngine {
         console.error(convertGLErrorToString(error));
     }
 
+    /**
+     * Checks for and throws an error if the shader failed to compile.
+     * @param shader - The WebGL shader to check.
+     */
     private readAndThrowShaderCompilationErrors(shader: WebGLShader) {
         let log = this.context.getShaderInfoLog(shader);
         if (log === null || log === '') return;
@@ -117,6 +151,10 @@ export class ConfettiEngine {
         throw new Error('Shader compilation error! ' + log);
     }
 
+    /**
+     * Checks for and throws an error if the program failed to link.
+     * @param program - The WebGL program to check.
+     */
     private readAndThrowProgramLinkingErrors(program: WebGLProgram) {
         let log = this.context.getProgramInfoLog(program);
         if (log === null || log === '') return;
@@ -124,6 +162,10 @@ export class ConfettiEngine {
         throw new Error('Program linking error! ' + log);
     }
 
+    /**
+     * Calculates the delta time since the last frame.
+     * @returns The delta time in milliseconds.
+     */
     private calculateDeltaTime() {
         if (this.options.assumeFrameTime) {
             return this.options.assumeFrameTime;
@@ -144,6 +186,9 @@ export class ConfettiEngine {
         return deltaTime
     }
 
+    /**
+     * Performs both the render and compute passes.
+     */
     private renderCompute() {
         this.renderPass();
         this.computePass(this.calculateDeltaTime());
@@ -151,6 +196,9 @@ export class ConfettiEngine {
         this.lastFrameEndTime = Date.now();
     }
 
+    /**
+     * Performs the render pass of the confetti.
+     */
     private renderPass() {
         this.context.bindVertexArray(this.renderVAO);
         this.context.useProgram(this.renderProgram);
@@ -168,6 +216,10 @@ export class ConfettiEngine {
         this.context.flush();
     }
 
+    /**
+     * Performs the compute pass for the confetti particles.
+     * @param deltaTime - The delta time since the last frame.
+     */
     private computePass(deltaTime: number) {
         this.context.bindVertexArray(this.computeVAO);
         this.context.useProgram(this.computeProgram);
@@ -191,11 +243,19 @@ export class ConfettiEngine {
         this.swapPingPongObjects();
     }
 
+    /**
+     * The main render loop using `requestAnimationFrame`.
+     */
     private renderComputeLoop() {
         this.renderCompute();
         requestAnimationFrame(this.renderComputeLoop.bind(this));
     }
 
+    /**
+     * Sets up the mesh buffer with the specified layout.
+     * @param vbo - The vertex buffer object.
+     * @param layout - The layout of the mesh data.
+     */
     private setUpMeshBuffer(vbo: WebGLBuffer, layout: DataLayout) {
         this.context.bindBuffer(this.context.ARRAY_BUFFER, vbo);
         this.context.bufferData(
@@ -207,11 +267,21 @@ export class ConfettiEngine {
         this.applyBufferAttributes(layout.mesh, 0);
     }
 
+    /**
+     * Sets up the particle buffer with the specified layout.
+     * @param vbo - The vertex buffer object.
+     * @param layout - The layout of the particle data.
+     */
     private setUpParticleBuffer(vbo: WebGLBuffer, layout: DataLayout) {
         this.context.bindBuffer(this.context.ARRAY_BUFFER, vbo);
         this.applyParticleBufferAttributes(layout.particle, 1);
     }
 
+    /**
+     * Applies vertex attributes to the current VAO.
+     * @param layout - The layout of the buffer attributes.
+     * @param divisor - The vertex attribute divisor (e.g., 1 for instance data).
+     */
     private applyBufferAttributes(layout: BufferLayout, divisor: number) {
         let strideBytes = getBufferStride(layout) * 4;
         let offsetBytes = 0;
@@ -233,6 +303,11 @@ export class ConfettiEngine {
         }
     }
 
+    /**
+     * Applies particle vertex attributes to the current VAO.
+     * @param layout - The layout of the particle buffer attributes.
+     * @param divisor - The vertex attribute divisor (e.g., 1 for instance data).
+     */
     private applyParticleBufferAttributes(layout: BufferLayout, divisor: number) {
         let strideBytes = getBufferStride(this.particleBufferLayout) * 4;
 
@@ -251,6 +326,10 @@ export class ConfettiEngine {
         }
     }
 
+    /**
+     * Updates the view matrix based on the canvas dimensions.
+     * @returns The updated view matrix.
+     */
     private updateViewMatrix() {
         this.viewMatrix = multiplyManyMatrices(
             scaleMatrix(2 / this.context.canvas.width, 2 / this.context.canvas.height, 1.0),
@@ -267,6 +346,11 @@ export class ConfettiEngine {
         return this.viewMatrix;
     }
 
+    /**
+     * Ensures that the varyings in the compute shader are in the correct order.
+     * @param varyings - The varyings extracted from the compute shader.
+     * @throws Error if the varyings are missing or in the wrong order.
+     */
     private ensureVaryingsCorrectOrder(varyings: VaryingInfo[]) {
         if (varyings.length !== this.particleBufferLayout.length) {
             let missing = this.particleBufferLayout.find(_=>!varyings.map(varying=>varying.name).includes('out_' + _.name));
@@ -284,6 +368,10 @@ export class ConfettiEngine {
         }
     }
 
+    /**
+     * Ensures that the compute shader consumes the correct number of elements.
+     * @throws Error if the compute shader does not match the expected layout.
+     */
     private ensureComputeShaderCorrectness() {
         if (this.computeLayout.particle.length !== this.particleBufferLayout.length) {
             let missing = this.particleBufferLayout.filter(_ => !this.computeLayout.particle.find(__=>__.name === _.name)).map(_ => _.name);
@@ -379,15 +467,24 @@ export class ConfettiEngine {
         return needResize;
     }
 
+    /**
+     * Starts the confetti animation.
+     */
     start() {
         this.stop();
         this.renderComputeLoop();
     }
 
+    /**
+     * Stops the confetti animation.
+     */
     stop() {
         cancelAnimationFrame(this.rafId);
     }
 
+    /**
+     * Swaps the ping-pong buffers and VAOs for the compute pass.
+     */
     swapPingPongObjects() {
         let otherVAO = this.computeVAO;
         this.computeVAO = this.computePingPongVAO;
@@ -404,6 +501,11 @@ export class ConfettiEngine {
     }
 
     // Loads an image from a URL into the next WebGL texture unit
+    /**
+     * Loads an image from a URL into a WebGL texture.
+     * @param url - The URL of the image to load.
+     * @param customUniformName - Optional custom name for the texture uniform.
+     */
     loadTextureFromURL(url: string, customUniformName?: string) {
         let textureId = this.context.createTexture();
         if (!textureId) {
@@ -479,6 +581,11 @@ export class ConfettiEngine {
         this.context.uniform1i(location, this.textures.length - 1);
     }
 
+    /**
+     * Creates new confetti instances.
+     * @param count - The number of instances to create.
+     * @param generator - The function used to generate the data for each instance.
+     */
     createParticleInstances(count: number, generator: ConfettiGeneratorFunction) {
         let particleData: number[] = [];
 
@@ -532,6 +639,10 @@ export class ConfettiEngine {
         this.swapPingPongObjects();
     }
 
+    /**
+     * Deletes all confetti instances.
+     * @throws Error because this is currently not implemented.
+     */
     deleteConfettiInstances() {
         throw new Error('Not Implemented!');
     }

@@ -4,10 +4,17 @@ type Face = [number, number, number];
 
 type OperatorFunction = (data: string, elements: OBJElements) => void;
 
+/**
+ * Represents the elements of a 3D model parsed from an OBJ file.
+ */
 export interface OBJElements {
+    /** List of vertex positions. */
     vertices: Vector3[];
+    /** List of texture coordinates. */
     uv: Vector2[];
+    /** List of vertex normals. */
     normals: Vector3[];
+    /** List of faces, where each face is an array of [vertex, UV, normal] indices. */
     faces: Face[]; // indexes in the order => [vertex, UV, normal]
 }
 
@@ -40,6 +47,9 @@ function parseFace(data: string): Face {
     ];
 }
 
+/**
+ * Maps OBJ file commands to their respective parsing functions.
+ */
 const objFunctions: Record<string, OperatorFunction> = {
     'v': (data: string, elements: OBJElements) => {
         let vector = parseVector3(data);
@@ -59,6 +69,11 @@ const objFunctions: Record<string, OperatorFunction> = {
     },
 };
 
+/**
+ * Parses a single line from an OBJ file and updates the elements.
+ * @param line - The raw line from the OBJ file.
+ * @param elements - The object containing collected model elements.
+ */
 function parseLine(line: string, elements: OBJElements) {
     let firstSpace = line.indexOf(' ');
     let command = line.substring(0, firstSpace);
@@ -69,6 +84,11 @@ function parseLine(line: string, elements: OBJElements) {
     operator(data, elements);
 }
 
+/**
+ * Parses a string containing OBJ file content into an `OBJElements` structure.
+ * @param source - The raw content of the OBJ file.
+ * @returns The parsed model elements.
+ */
 export function parseOBJ(source: string) {
     let lines = source.split('\n');
 

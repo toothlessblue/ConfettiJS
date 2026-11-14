@@ -1,11 +1,22 @@
 import { Options } from './options';
 
+/**
+ * Creates a canvas element and appends it to the specified parent element.
+ * @param parent - The parent element to append the canvas to.
+ * @returns The created canvas element.
+ */
 function createCanvasAndAddToDOM(parent: HTMLElement): HTMLCanvasElement {
     let canvas = document.createElement('canvas');
     parent.appendChild(canvas);
     return canvas;
 }
 
+/**
+ * Initializes the canvas, sets up resize handling, and calls the initial resize callback.
+ * @param options - The configuration options for initialization.
+ * @param resizeCallback - A callback function that is called whenever the canvas is resized.
+ * @returns The initialized canvas element.
+ */
 export function initCanvas(options: Options, resizeCallback: (width: number, height: number) => void) {
     let parent = options.parentElement;
     let canvas = options.canvas ?? createCanvasAndAddToDOM(parent);

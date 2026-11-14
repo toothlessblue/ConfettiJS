@@ -1,4 +1,3 @@
-//language=GLSL
 export const basicShader_vert = `#version 300 es
 precision highp float;
 
@@ -41,7 +40,6 @@ void main() {
 
 `;
 
-//language=GLSL
 export const basicShader_frag = `#version 300 es
 precision mediump float;
 
@@ -57,7 +55,6 @@ void main() {
 }
 `;
 
-//language=GLSL
 export const basicShader_compute = `#version 300 es
 
 precision highp float;

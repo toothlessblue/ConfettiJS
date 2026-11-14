@@ -4,6 +4,12 @@ import { DataLayout } from './buffer-layout';
 const layoutRegex = /layout \(location = (?<locationString>[0-9]*)\) in (?<typeString>.*) (?<name>.*);/g;
 const varyingRegex = /^out (.*) (.*);$/;
 
+/**
+ * Maps a GLSL type string to its corresponding `AttributeArrayType`.
+ * @param type - The GLSL type string.
+ * @returns The corresponding `AttributeArrayType`.
+ * @throws Error if the type is unsupported.
+ */
 function typeDefinitionToAttributeType(type: string) {
     switch (type) {
         case 'int':
@@ -27,12 +33,23 @@ function typeDefinitionToAttributeType(type: string) {
     }
 }
 
+/**
+ * Information about a varying variable in a shader.
+ */
 export interface VaryingInfo {
+    /** The name of the varying. */
     name: string;
+    /** The type of the varying. */
     type: string;
+    /** The size of the varying in bytes. */
     sizeBytes: number;
 }
 
+/**
+ * Extracts varyings from a compute shader source string.
+ * @param source - The compute shader source.
+ * @returns An array of `VaryingInfo` objects.
+ */
 export function getVaryingsFromComputeShader(source: string) {
     let ret: VaryingInfo[] = [];
 
@@ -49,6 +66,12 @@ export function getVaryingsFromComputeShader(source: string) {
     return ret;
 }
 
+/**
+ * Parses a shader source string to determine its buffer layout.
+ * @param source - The shader source string.
+ * @returns The parsed `DataLayout`.
+ * @throws Error if a location is reused within the shader source.
+ */
 export function parseShaderForBufferLayout(source: string) {
     let meshKeynames = ['modelPosition', 'modelNormal', 'modelUv'];
 

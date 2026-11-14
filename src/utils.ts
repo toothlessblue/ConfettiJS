@@ -1,3 +1,8 @@
+/**
+ * Converts a WebGL error code into a human-readable string.
+ * @param error - The WebGL error code.
+ * @returns A string representation of the error.
+ */
 export function convertGLErrorToString(error: number) {
     switch (error) {
         case WebGL2RenderingContext.NO_ERROR:
@@ -19,10 +24,22 @@ export function convertGLErrorToString(error: number) {
     }
 }
 
+/**
+ * Checks if a number is a power of two.
+ * @param value - The number to check.
+ * @returns True if the value is a power of two, false otherwise.
+ */
 export function isPowerOf2(value: number) {
     return (value & (value - 1)) === 0;
 }
 
+/**
+ * Returns a new array containing only unique elements from the input array,
+ * based on a key provided by the `toKey` function.
+ * @param ofItems - The array of items to filter.
+ * @param toKey - A function that returns a unique key for each item.
+ * @returns A new array with unique items.
+ */
 export function uniqueOf<T>(ofItems: T[], toKey: (v: T) => string) {
     let ret: T[] = [];
     let got = new Set<string>();
