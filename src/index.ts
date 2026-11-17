@@ -153,6 +153,8 @@ export class ConfettiEngine {
      * The main render loop using `requestAnimationFrame`.
      */
     private renderComputeLoop() {
+        if (this.instanceCount === 0) return;
+
         this.renderCompute();
         requestAnimationFrame(this.renderComputeLoop.bind(this));
     }
